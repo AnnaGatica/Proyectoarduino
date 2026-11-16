@@ -1,0 +1,232 @@
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de iluminación</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eeeeee;
+            text-align: center;
+            padding: 40px 15px;
+        }
+
+        .contenedor {
+            background-color: white;
+            max-width: 400px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #estado {
+            font-size: 25px;
+            font-weight: bold;
+            margin: 30px 0;
+        }
+
+        button {
+            padding: 15px 25px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #encender {
+            background-color: green;
+        }
+
+        #apagar {
+            background-color: red;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #mensaje {
+            color: #555;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="contenedor">
+
+        <h1>Control de iluminación</h1>
+
+        <h3>Estado de la luz</h3>
+
+        <p id="estado">Conectando...</p>
+
+        <button id="encender" disabled>ENCENDER</button>
+        <button id="apagar" disabled>APAGAR</button>
+
+        <p id="mensaje">Iniciando conexión...</p>
+
+    </div>
+
+    <script type="module">
+
+        // IMPORTAR FIREBASE
+
+        import { initializeApp } from
+        "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+        import {
+            getDatabase,
+            ref,
+            set,
+            onValue
+        } from
+        "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        import {
+            getAuth,
+            signInAnonymously
+        } from
+        "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+
+        // CONFIGURACION FIREBASE
+
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY",
+            authDomain: "proyecto-foco-5e4fd.firebaseapp.com",
+            databaseURL: "https://proyecto-foco-5e4fd-default-rtdb.firebaseio.com/",
+            projectId: "proyecto-foco-5e4fd",
+            appId: "TU_APP_ID"
+        };
+
+
+        // INICIALIZAR FIREBASE
+
+        const app = initializeApp(firebaseConfig);
+
+        const db = getDatabase(app);
+
+        const auth = getAuth(app);
+
+
+        // REFERENCIA A LA LUZ
+
+        const luzRef = ref(db, "aula1/encendida");
+
+
+        // ELEMENTOS HTML
+
+        const estado = document.getElementById("estado");
+        const mensaje = document.getElementById("mensaje");
+
+        const botonEncender = document.getElementById("encender");
+        const botonApagar = document.getElementById("apagar");
+
+
+        // FUNCION PARA CAMBIAR EL ESTADO
+
+        async function cambiarLuz(valor) {
+
+            try {
+
+                botonEncender.disabled = true;
+                botonApagar.disabled = true;
+
+                mensaje.textContent = "Enviando orden...";
+
+                await set(luzRef, valor);
+
+                mensaje.textContent = "Orden enviada correctamente";
+
+            } catch (error) {
+
+                mensaje.textContent = "Error: " + error.message;
+
+            } finally {
+
+                botonEncender.disabled = false;
+                botonApagar.disabled = false;
+
+            }
+        }
+
+
+        // BOTONES
+
+        botonEncender.onclick = () => cambiarLuz(true);
+
+        botonApagar.onclick = () => cambiarLuz(false);
+
+
+        // AUTENTICACION ANONIMA
+
+        async function iniciarSistema() {
+
+            try {
+
+                await signInAnonymously(auth);
+
+                mensaje.textContent = "Conectado correctamente";
+
+                botonEncender.disabled = false;
+                botonApagar.disabled = false;
+
+
+                // ESCUCHAR CAMBIOS EN FIREBASE
+
+                onValue(luzRef, (snapshot) => {
+
+                    const encendida = snapshot.val();
+
+                    if (encendida === true) {
+
+                        estado.textContent = "ENCENDIDA";
+                        estado.style.color = "green";
+
+                    } else if (encendida === false) {
+
+                        estado.textContent = "APAGADA";
+                        estado.style.color = "red";
+
+                    } else {
+
+                        estado.textContent = "SIN DATOS";
+                        estado.style.color = "gray";
+
+                    }
+
+                }, (error) => {
+
+                    estado.textContent = "Error de conexión";
+                    mensaje.textContent = error.message;
+
+                });
+
+            } catch (error) {
+
+                mensaje.textContent = "Error de autenticación: " + error.message;
+
+                estado.textContent = "Sin conexión";
+            }
+        }
+
+        iniciarSistema();
+
+    </script>
+
+</body>
+</html>
